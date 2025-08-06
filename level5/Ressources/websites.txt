@@ -1,0 +1,5 @@
+# ----------------------------------------- #
+#       WEBSITES FOR THE EXPLOITATION       #
+# ----------------------------------------- #
+
+https://www.ret2rop.com/2018/10/format-strings-got-overwrite-remote.html

