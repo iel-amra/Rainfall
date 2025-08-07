@@ -1,0 +1,6 @@
+**What the C code does:**
+
+1. Takes the first argument: `atoi(*(char **)(param_2 + 4))` → converts `argv[1]` into an integer.
+2. Compares to `0x1a7`: If the argument equals 423 in decimal (0x1a7 = 423).
+3. Launches a shell: Executes `/bin/sh` with elevated privileges.
+4. Otherwise: Displays "No !".

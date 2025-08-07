@@ -1,0 +1,49 @@
+Walkthrough: Heap Buffer Overflow Exploitation (level6)
+
+Objective:
+Exploit a heap-based buffer overflow to redirect execution flow to the `n` function.
+
+---
+
+Step 1: Identify the Offset on the Heap
+
+To find the number of bytes needed to reach the return address (or target function pointer), a pattern generator was used.
+
+Tool used:
+https://wiremask.eu/tools/buffer-overflow-pattern-generator/
+
+Feed the generated pattern into the binary and analyze the crash in GDB to find the offset.
+
+Result:
+The offset from the start of the input to the overwritten pointer is **72 bytes**.
+
+---
+
+Step 2: Find the Address of the Target Function (`n`)
+
+We want to redirect execution to the function `n`. Use GDB to find its address:
+
+    (gdb) p n
+    $1 = {<text variable, no debug info>} 0x8048454 <n>
+
+So the address of `n` is: 0x08048454
+
+---
+
+Step 3: Craft the Exploit Payload
+
+We construct an input that fills the buffer with 72 bytes of junk (e.g., 'A'), followed by the 4-byte address of `n` in little endian format.
+
+Python command:
+    ./level6 $(python -c 'print "A" * 72 + "\x54\x84\x04\x08"')
+
+Explanation:
+- `"A" * 72` → fill the buffer up to the overflow point
+- `"\x54\x84\x04\x08"` → address of the `n` function in little endian byte order
+
+This causes the overwritten pointer (likely a return address or function pointer) to jump to the `n` function.
+
+---
+
+Result:
+The function `n()` is executed, completing the challenge via heap-based buffer overflow.

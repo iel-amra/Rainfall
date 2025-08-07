@@ -43,7 +43,7 @@ Breakpoint 1, 0x0804867c in main ()
 0x804a00c:      0x41414141                           // buffer address
 ```
 The value of [esp+0x10] will be replaced with 0x804a00c.  
-Because we need to dereference again, this address will points to the beginning of our shellcode : 0x804a00x + 4 = 0x804a010.
+Because we need to dereference again, this address will points to the beginning of our shellcode : 0x804a00c + 4 = 0x804a010.
 ```
 payload : shell_addr + shellcode + padding + buffer_addr
           [4 bytes]   [28 bytes]  [76 bytes]  [4 bytes] = 108 + 4

